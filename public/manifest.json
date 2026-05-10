@@ -1,0 +1,17 @@
+{
+  "name": "NPB Live Bot",
+  "short_name": "NPB Bot",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0b1020",
+  "theme_color": "#0b1020",
+  "description": "スポーツナビのNPB試合を監視して、得点とテキスト速報を表示するPWA",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

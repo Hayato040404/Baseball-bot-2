@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" role="img" aria-label="NPB Bot">
+  <rect width="192" height="192" rx="40" fill="#0b1020"/>
+  <circle cx="96" cy="96" r="58" fill="#ffffff" opacity="0.12"/>
+  <path d="M54 122V70h15l26 31V70h18v52H98L72 91v31H54zm74 0V70h14v52h-14z" fill="#ffffff"/>
+  <path d="M39 152h114" stroke="#8be9fd" stroke-width="8" stroke-linecap="round"/>
+</svg>
