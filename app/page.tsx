@@ -175,7 +175,7 @@ export default function Page() {
                 ))
               ) : (
                 <article className="play">
-                  <div className="text">まだデータがありません。Vercel Cron が15分ごとに /api/cron を叩くと更新されます。</div>
+                  <div className="text">まだデータがありません。Web service のサーバー巡回で更新されます。</div>
                 </article>
               )}
             </div>
@@ -186,12 +186,12 @@ export default function Page() {
           <h2>運用メモ</h2>
           <div className="meta">
             <div>・Push通知には VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY が必要です。</div>
-            <div>・Vercel KV があれば購読データと状態を永続化できます。</div>
-            <div>・スクレイピングは 14:00〜22:00 JST の間だけ実行する前提です。</div>
+            <div>・KV_REST_API_URL / KV_REST_API_TOKEN があれば購読データと状態を永続化できます。</div>
+            <div>・スクレイピングは 14:00〜22:00 JST の間だけ実行します。</div>
           </div>
         </section>
 
-        <div className="footer">NPB Live Bot / mobile ready / Vercel deploy target</div>
+        <div className="footer">NPB Live Bot / mobile ready / Render web service</div>
       </div>
     </main>
   );

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { ensureServerSchedulerStarted } from '@/lib/server-scheduler';
 
 export const metadata: Metadata = {
   title: 'NPB Live Bot',
@@ -9,6 +10,8 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  ensureServerSchedulerStarted();
+
   return (
     <html lang="ja">
       <body>{children}</body>
