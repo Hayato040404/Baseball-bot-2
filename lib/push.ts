@@ -1,6 +1,11 @@
 import webpush from 'web-push';
 import type { GameSnapshot, PlayEvent } from './types';
-import { getSubscriptions, removeSubscription, type StoredPushSubscription } from './subscriptions';
+import {
+  addSubscription,
+  getSubscriptions,
+  removeSubscription,
+  type StoredPushSubscription,
+} from './subscriptions';
 
 export type PushPayload = {
   title: string;
@@ -20,9 +25,11 @@ function requireEnv(name: string): string {
 
 function configureWebPush() {
   if (configured) return;
+
   const publicKey = requireEnv('VAPID_PUBLIC_KEY');
   const privateKey = requireEnv('VAPID_PRIVATE_KEY');
   const subject = process.env.VAPID_SUBJECT || 'mailto:admin@example.com';
+
   webpush.setVapidDetails(subject, publicKey, privateKey);
   configured = true;
 }
@@ -60,16 +67,16 @@ export async function subscribeFromClient(subscription: PushSubscriptionJSON) {
     },
   };
 
-  await saveSubscription(sub);
+  await addSubscription(sub);
 }
 
 export async function unsubscribeFromClient(endpoint: string) {
-  const { removeSubscription } = await import('./subscriptions');
   await removeSubscription(endpoint);
 }
 
 export async function sendPushToAll(payload: PushPayload) {
   if (!isPushReady()) return { sent: 0, removed: 0 };
+
   configureWebPush();
 
   const subs = await getSubscriptions();
@@ -83,7 +90,7 @@ export async function sendPushToAll(payload: PushPayload) {
         await webpush.sendNotification(
           {
             endpoint: sub.endpoint,
-            expirationTime: sub.expirationTime,
+            expirationTime: sub.expirationTime ?? undefined,
             keys: sub.keys,
           },
           serialized
@@ -107,6 +114,7 @@ export function createScorePush(snapshot: GameSnapshot, newest?: PlayEvent | nul
   const away = snapshot.awayTeam;
   const hs = snapshot.homeScore ?? 0;
   const as = snapshot.awayScore ?? 0;
+
   const body = newest
     ? `${home} ${hs} - ${as} ${away}\n${newest.inning} ${newest.team ? `/${newest.team}` : ''} ${newest.text}`
     : `${home} ${hs} - ${as} ${away}`;
