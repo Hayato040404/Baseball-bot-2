@@ -34,3 +34,7 @@ yarn dev
 ## 補足
 - スクレイピングは 14:00〜22:00 JST の間だけ動きます
 - サーバー巡回は `/api/live` が呼ばれたタイミングで起動します
+
+
+## UI
+Apple-like glassmorphism dashboard with a large hero panel, live score glass card, and vertical text feed.

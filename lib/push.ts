@@ -1,11 +1,6 @@
 import webpush from 'web-push';
 import type { GameSnapshot, PlayEvent } from './types';
-import {
-  addSubscription,
-  getSubscriptions,
-  removeSubscription,
-  type StoredPushSubscription,
-} from './subscriptions';
+import { addSubscription, getSubscriptions, removeSubscription, type StoredPushSubscription } from './subscriptions';
 
 export type PushPayload = {
   title: string;
@@ -13,6 +8,15 @@ export type PushPayload = {
   url?: string;
   tag?: string;
   data?: Record<string, unknown>;
+};
+
+export type PushSubscriptionInput = {
+  endpoint?: string;
+  expirationTime?: number | null;
+  keys?: {
+    p256dh?: string;
+    auth?: string;
+  };
 };
 
 let configured = false;
@@ -25,11 +29,9 @@ function requireEnv(name: string): string {
 
 function configureWebPush() {
   if (configured) return;
-
   const publicKey = requireEnv('VAPID_PUBLIC_KEY');
   const privateKey = requireEnv('VAPID_PRIVATE_KEY');
   const subject = process.env.VAPID_SUBJECT || 'mailto:admin@example.com';
-
   webpush.setVapidDetails(subject, publicKey, privateKey);
   configured = true;
 }
@@ -49,7 +51,19 @@ export function isPushReady() {
   return Boolean(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY);
 }
 
-export async function subscribeFromClient(subscription: PushSubscriptionJSON) {
+export function publicKeyToUint8Array(key: string) {
+  return base64UrlToUint8Array(key);
+}
+
+export function toPushSubscriptionJson(raw: unknown): PushSubscriptionInput {
+  const sub = raw as PushSubscriptionInput;
+  if (!sub || typeof sub.endpoint !== 'string' || !sub.keys) {
+    throw new Error('Invalid push subscription');
+  }
+  return sub;
+}
+
+export async function subscribeFromClient(subscription: PushSubscriptionInput) {
   if (!subscription.endpoint) {
     throw new Error('Push subscription endpoint is missing.');
   }
@@ -76,7 +90,6 @@ export async function unsubscribeFromClient(endpoint: string) {
 
 export async function sendPushToAll(payload: PushPayload) {
   if (!isPushReady()) return { sent: 0, removed: 0 };
-
   configureWebPush();
 
   const subs = await getSubscriptions();
@@ -101,6 +114,8 @@ export async function sendPushToAll(payload: PushPayload) {
         if (status === 404 || status === 410) {
           await removeSubscription(sub.endpoint);
           removed += 1;
+        } else {
+          console.error('Push send failed:', error);
         }
       }
     })
@@ -114,7 +129,6 @@ export function createScorePush(snapshot: GameSnapshot, newest?: PlayEvent | nul
   const away = snapshot.awayTeam;
   const hs = snapshot.homeScore ?? 0;
   const as = snapshot.awayScore ?? 0;
-
   const body = newest
     ? `${home} ${hs} - ${as} ${away}\n${newest.inning} ${newest.team ? `/${newest.team}` : ''} ${newest.text}`
     : `${home} ${hs} - ${as} ${away}`;
@@ -133,16 +147,4 @@ export function createScorePush(snapshot: GameSnapshot, newest?: PlayEvent | nul
       awayScore: snapshot.awayScore,
     },
   };
-}
-
-export function toPushSubscriptionJson(raw: unknown): PushSubscriptionJSON {
-  const sub = raw as PushSubscriptionJSON;
-  if (!sub || typeof sub.endpoint !== 'string' || !sub.keys) {
-    throw new Error('Invalid push subscription');
-  }
-  return sub;
-}
-
-export function publicKeyToUint8Array(key: string) {
-  return base64UrlToUint8Array(key);
 }

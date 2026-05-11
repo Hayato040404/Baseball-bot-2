@@ -9,15 +9,6 @@ export type StoredPushSubscription = {
   };
 };
 
-export type PushSubscriptionInput = {
-  endpoint?: string;
-  expirationTime?: number | null;
-  keys?: {
-    p256dh?: string;
-    auth?: string;
-  };
-};
-
 const KEY = 'npb:push-subs';
 
 declare global {
@@ -61,6 +52,5 @@ export async function addSubscription(sub: StoredPushSubscription): Promise<void
 
 export async function removeSubscription(endpoint: string): Promise<void> {
   const subs = await getSubscriptions();
-  const next = subs.filter((s) => s.endpoint !== endpoint);
-  await saveSubscriptions(next);
+  await saveSubscriptions(subs.filter((s) => s.endpoint !== endpoint));
 }
