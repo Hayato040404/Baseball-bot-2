@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
-import type { BotState, PlayEvent } from '@/lib/types';
+import { useEffect, useMemo, useState } from 'react';
+import type { BotState } from '@/lib/types';
 import { getPublicVapidKey, publicKeyToUint8Array } from '@/lib/push-client';
 
 const fmt = new Intl.DateTimeFormat('ja-JP', {
@@ -19,8 +19,9 @@ export default function Page() {
   const [permission, setPermission] = useState<NotificationPermission>(
     typeof Notification !== 'undefined' ? Notification.permission : 'default'
   );
-  const [pushStatus, setPushStatus] = useState<'idle' | 'subscribed' | 'unsupported' | 'error'>('idle');
-  const initializedRef = useRef(false);
+  const [pushStatus, setPushStatus] = useState<'idle' | 'subscribed' | 'unsupported' | 'error'>(
+    'idle'
+  );
   const snapshot = state?.snapshot ?? null;
   const sortedEvents = useMemo(() => state?.events ?? [], [state]);
 
@@ -42,7 +43,6 @@ export default function Page() {
         const fallback = (await res.json()) as BotState;
         setState(fallback);
       }
-      if (!initializedRef.current) initializedRef.current = true;
     } finally {
       setLoading(false);
     }
@@ -56,10 +56,15 @@ export default function Page() {
 
   async function subscribePush() {
     try {
-      if (!('serviceWorker' in navigator) || !('PushManager' in window) || typeof Notification === 'undefined') {
+      if (
+        !('serviceWorker' in navigator) ||
+        !('PushManager' in window) ||
+        typeof Notification === 'undefined'
+      ) {
         setPushStatus('unsupported');
         return;
       }
+
       const permissionResult = await Notification.requestPermission();
       setPermission(permissionResult);
       if (permissionResult !== 'granted') return;
@@ -92,8 +97,10 @@ export default function Page() {
   }
 
   useEffect(() => {
-    refreshState();
-    const timer = setInterval(refreshState, 30000);
+    void refreshState();
+    const timer = setInterval(() => {
+      void refreshState();
+    }, 30000);
     return () => clearInterval(timer);
   }, []);
 
@@ -149,7 +156,7 @@ export default function Page() {
               <button className="btn primary" onClick={subscribePush}>
                 バックグラウンドPushを有効化
               </button>
-              <button className="btn" onClick={refreshState}>
+              <button className="btn" onClick={() => void refreshState()}>
                 最新状態を再取得
               </button>
             </div>

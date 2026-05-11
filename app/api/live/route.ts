@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { loadBotFeed } from '@/lib/scraper';
 import { getState, setState } from '@/lib/store';
 import { inScrapeWindowJst } from '@/lib/clock';
+import { ensureServerSchedulerStarted } from '@/lib/server-scheduler';
 import type { BotState } from '@/lib/types';
 
 export const runtime = 'nodejs';
@@ -18,9 +19,14 @@ function emptyState(): BotState {
 
 export async function GET() {
   try {
+    ensureServerSchedulerStarted();
+
     if (!inScrapeWindowJst()) {
       const state = await getState();
-      return NextResponse.json({ ok: true, skipped: true, state }, { headers: { 'cache-control': 'no-store' } });
+      return NextResponse.json(
+        { ok: true, skipped: true, state },
+        { headers: { 'cache-control': 'no-store' } }
+      );
     }
 
     const current = await getState();
@@ -36,7 +42,15 @@ export async function GET() {
 
     await setState(next);
 
-    return NextResponse.json({ ok: true, snapshot: next.snapshot, events: next.events, updatedAt: next.lastUpdateAt }, { headers: { 'cache-control': 'no-store' } });
+    return NextResponse.json(
+      {
+        ok: true,
+        snapshot: next.snapshot,
+        events: next.events,
+        updatedAt: next.lastUpdateAt,
+      },
+      { headers: { 'cache-control': 'no-store' } }
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json({ ok: false, error: message }, { status: 500 });

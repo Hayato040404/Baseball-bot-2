@@ -33,29 +33,29 @@ export async function findDeNAGameFromSchedule(): Promise<{
   const html = await fetchHtml(SCHEDULE_URL);
   const $ = cheerio.load(html);
 
-  const candidateRows = $('.bb-scheduleTable__row').toArray();
-  for (const row of candidateRows) {
-    const rowText = textify($(row).text());
-    if (!/(DeNA|横浜DeNAベイスターズ)/.test(rowText)) continue;
-
-    const link = $(row).find('a[href*="/npb/game/"]').first();
+  const items = $('.bb-score__item').toArray();
+  for (const item of items) {
+    const link = $(item).find('a.bb-score__content[href*="/npb/game/"]').first();
     if (!link.length) continue;
+
+    const rawText = textify($(item).text());
+    if (!/(DeNA|横浜DeNAベイスターズ)/.test(rawText)) continue;
 
     const href = link.attr('href');
     if (!href) continue;
 
-    const title = textify(rowText);
     return {
       scheduleUrl: SCHEDULE_URL,
       gameUrl: absolutize(href),
-      title,
+      title: rawText,
     };
   }
 
-  const fallback = $('a[href*="/npb/game/"]').first();
+  const fallback = $('a.bb-score__content[href*="/npb/game/"]').first();
   if (!fallback.length) throw new Error('No game link found on schedule page');
   const href = fallback.attr('href');
   if (!href) throw new Error('Game link missing href');
+
   return {
     scheduleUrl: SCHEDULE_URL,
     gameUrl: absolutize(href),
@@ -64,22 +64,47 @@ export async function findDeNAGameFromSchedule(): Promise<{
 }
 
 export async function getGameSnapshot(gameUrl: string): Promise<GameSnapshot> {
-  const topUrl = gameUrl.endsWith('/top') ? gameUrl : gameUrl.replace(/\/(?:index|score|text|stats|video|cheer)$/, '/top');
+  const topUrl = gameUrl.endsWith('/top')
+    ? gameUrl
+    : gameUrl.replace(/\/(?:index|score|text|stats|video|cheer)$/, '/top');
+
   const html = await fetchHtml(topUrl);
   const $ = cheerio.load(html);
 
-  const title = textify($('title').text()) || textify($('meta[property="og:title"]').attr('content') || '');
-  const textHref = $('a.bb-menuWhite__text[href$="/text"]').attr('href')
-    || $('a[href*="/text"]').first().attr('href')
-    || gameUrl.replace(/\/top$/, '/text');
+  const title =
+    textify($('title').text()) || textify($('meta[property="og:title"]').attr('content') || '');
 
-  const homeScore = safeInt($('.bb-gameTeam__homeScore').first().text());
-  const awayScore = safeInt($('.bb-gameTeam__awayScore').first().text());
-  const status = textify($('.bb-gameCard__state span').first().text()) || textify($('.bb-gameCard__state').first().text()) || '取得中';
+  const textHref =
+    $('a.bb-menuWhite__text[href$="/text"]').attr('href') ||
+    $('a[href*="/text"]').first().attr('href') ||
+    gameUrl.replace(/\/top$/, '/text');
 
-  const teamNames = $('.bb-gameTeam__name').toArray().map((el) => textify($(el).text())).filter(Boolean);
-  const homeTeam = teamNames[0] || 'ホーム';
-  const awayTeam = teamNames[1] || 'アウェイ';
+  const homeScore =
+    safeInt($('.bb-gameTeam__homeScore').first().text()) ??
+    safeInt($('.bb-score__score--left').first().text());
+  const awayScore =
+    safeInt($('.bb-gameTeam__awayScore').first().text()) ??
+    safeInt($('.bb-score__score--right').first().text());
+
+  const status =
+    textify($('.bb-gameCard__state span').first().text()) ||
+    textify($('.bb-gameCard__state').first().text()) ||
+    textify($('.bb-score__status').first().text()) ||
+    '取得中';
+
+  const teamNames = $('.bb-gameTeam__name')
+    .toArray()
+    .map((el) => textify($(el).text()))
+    .filter(Boolean);
+
+  const homeTeam =
+    teamNames[0] ||
+    textify($('.bb-score__homeLogo').first().text()) ||
+    'ホーム';
+  const awayTeam =
+    teamNames[1] ||
+    textify($('.bb-score__awayLogo').first().text()) ||
+    'アウェイ';
 
   return {
     scheduleUrl: SCHEDULE_URL,
@@ -100,10 +125,11 @@ export async function getTextPlays(textUrl: string): Promise<PlayEvent[]> {
   const $ = cheerio.load(html);
   const plays: PlayEvent[] = [];
 
-  $('section.bb-liveText').each((_, section) => {
+  const sections = $('section.bb-liveText').toArray();
+  for (const section of sections) {
     const header = $(section).find('header.bb-liveText__head').first();
     const inningId = header.attr('id') || '';
-    const inning = textify(header.find('.bb-liveText__inning').text());
+    const inning = textify(header.find('.bb-liveText__inning').text()) || '試合情報';
     const team = textify(header.find('.bb-liveText__detail').text());
 
     $(section)
@@ -111,11 +137,12 @@ export async function getTextPlays(textUrl: string): Promise<PlayEvent[]> {
       .each((index, item) => {
         const rawText = textify($(item).text());
         if (!rawText) return;
+
         const numberText = textify($(item).find('.bb-liveText__number').first().text());
         const number = safeInt(numberText.replace(/：$/, '').replace(/:$/, ''));
-        const key = `${inningId}:${index + 1}:${rawText}`;
+
         plays.push({
-          key,
+          key: `${inningId || 'section'}:${index + 1}:${rawText}`,
           inning,
           inningId,
           team,
@@ -123,7 +150,7 @@ export async function getTextPlays(textUrl: string): Promise<PlayEvent[]> {
           number,
         });
       });
-  });
+  }
 
   return plays;
 }
