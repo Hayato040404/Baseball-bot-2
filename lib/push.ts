@@ -43,13 +43,24 @@ export function isPushReady() {
 }
 
 export async function subscribeFromClient(subscription: PushSubscriptionJSON) {
+  if (!subscription.endpoint) {
+    throw new Error('Push subscription endpoint is missing.');
+  }
+
+  if (!subscription.keys?.p256dh || !subscription.keys?.auth) {
+    throw new Error('Push subscription keys are missing.');
+  }
+
   const sub: StoredPushSubscription = {
     endpoint: subscription.endpoint,
     expirationTime: subscription.expirationTime ?? null,
-    keys: subscription.keys,
+    keys: {
+      p256dh: subscription.keys.p256dh,
+      auth: subscription.keys.auth,
+    },
   };
-  const { addSubscription } = await import('./subscriptions');
-  await addSubscription(sub);
+
+  await saveSubscription(sub);
 }
 
 export async function unsubscribeFromClient(endpoint: string) {
